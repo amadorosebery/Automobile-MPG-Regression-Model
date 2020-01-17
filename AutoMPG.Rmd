@@ -1,0 +1,129 @@
+---
+title: "Analysis of Automobile Miles Per Gallon Factors"
+author: "Amado Rosebery"
+date: "March 16, 2019"
+output:
+  word_document: default
+  html_document: default
+---
+
+**Abstract**
+
+In this analysis report we are going to be analyzing different car attributes in order to determine which attributes have the largest impact on a car’s miles per gallon (MPG). In this report we are specifically going to be looking at factors such as: the number of cylinders that a car has, engine displacement, horsepower, the weight of the car, the acceleration of the car, and the year that the car was made. One of the main results that we are trying to figure out is which of these factors have an impact on a car’s miles per gallon. From there we can ask the question: if this factor does impact a car’s miles per gallon, does it increase the miles per gallon or does it decrease the miles per gallon. This dataset was found through the UC Irvine data repository. 
+
+**Introduction**
+
+For the majority of working American citizens, the automobile is a very important part of their life. For most people, a car is their primary form of transportation to get from one location to another when it is too far to walk. People drive to work, to school, to the grocery store, and many other locations on a weekly if not daily basis. However, there is a small price to pay when it comes to owning and driving a car which is the cost of fuel. In order for a car to operate as intended, it needs fuel. Unfortunately, fuel is not free, and for that reason, drivers are always looking a way to save money on fuel. This is the motivation for this analysis report. The interesting thing about cars is that not all cars require you to fuel your car at the same rate. Some cars might enable you to drive 300 miles before you have to stop and refuel your car, but other cars might require you to stop and refuel your car after 200 miles. In the long run, this matters a lot when it comes to one’s finances. The less often you have to stop for gas, the more money you save, and we know that saving is a top priority for almost everyone. Therefore, I wanted to conduct this analysis to help inform people on the factors they should be looking at when it comes to fuel consumption of a potential car that they may be looking to buy. Miles per gallon has big financial implications after the initial purchase of the car is made, so the goal is to inform people on which car attributes will give them the best miles per gallon in a car. 
+
+***Questions of Interest**
+Which car attributes have a significant impact on the miles per gallon of a car, and which are the most and least important?
+
+What model will give us the most accurate prediction when trying to predict miles per gallon? 
+
+
+**Data and Regression Methods**
+The data that I am using to conduct this analysis was found on the UC Irvine data repository. We are going to be using Miles Per Gallon (MPG) as our response variable, and the potential predictors that we are going to be analyzing are the number of cylinders that the car has, engine displacement, horsepower, the weight of the car, the acceleration of the car, and the year that the car was made. 
+
+The next question that we have to answer is: How are we going to find the answers to our questions of interest. Well, in order to figure out which of the factors have a significant impact on miles per gallon, we can do some modelling and then create an anova table that will give us some important incite. Since we are creating a linear regression model we will need to check the four assumptions: linearity, independence, normality, and constant variance. In order to determine whether the attributes are positively or negatively correlated with miles per gallon, we can make some scatterplots which should provide us some answers. In terms of finding the model which will help us most accurately determine a car’s miles per gallon, there are a lot of different methods that we can use. We can compare potential full models with reduced models using a partial F-test, we can use forward and backward elimination algorithms and AIC to try and find the best model, we can use R^2, adjusted R^2, Cp, and BIC values to to help us determine the best model as well. In order to find interaction between terms we can use a partial F-test to see if interaction is something that we need to include within our model. 
+
+
+The first step of our analysis is going to be to create some scatterplots to see how the different variables relate to each other and specifically how they relate to our miles per gallon variable. We can create a matrix of scatter plots compairing each pair of variables using the pairs() function in R. We simply create a preliminary model including all of the potential variables, with mpg as the response, then plug the model into the pairs function, and we will get a matrix of scatterplots in return. The premilinary model that we will use is a model including all 6 of our factors: cylinders, displacement, horsepower, weight, acceleration, and year with MPG as the response. 
+
+```{r}
+setwd("/Users/amadorosebery/Desktop/")
+MPGdata<-read.table("auto-mpg.data.txt",header=FALSE)
+colnames(MPGdata)<-c("mpg","cylinders","displacement","horsepower","weight","acceleration","year","origin","name")
+pairsModel1<-(MPGdata$mpg~MPGdata$cylinders+MPGdata$displacement+MPGdata$horsepower+MPGdata$weight+MPGdata$acceleration+MPGdata$year)
+pairs(pairsModel1)
+```
+
+The most important part of this matrix for us is the top row. This row shows us each scatterplot where mpg is on the Y axis and one of our other predictor variables is on the X axis. The first thing I'm looking for is linear relationships between our predictors and MPG. Immediately I can see that year and MPG have a pretty strong positive linear relationship. As the year increases, we see the MPG increase as well. This means that newer cars tend to have better gas mileage than older cars. Displacement, weight, and horsepower seem to be negatively correlated with MPG, but the plots don't seem completely linear. However, we might be able to fix this with a log() transformation. In this case the negative correlation tells that when the engine displacement of a car increases, the MPG decreases, and when the weight of a car increases, the MPG also decreases. Also, when the horsepower of a car increases we see a decrease in MPG. Lets see if we can create a linear relationship for displacement, weight, and horsepower using a transformation.
+
+```{r}
+Model2<-(log(MPGdata$mpg)~MPGdata$cylinders+log(MPGdata$displacement)+log(MPGdata$horsepower)+log(MPGdata$weight)+MPGdata$acceleration+MPGdata$year)
+pairs(Model2)
+```
+
+With this new model, the linearity of the year variable is kept, and the log(weight), log(displacement), and log(horsepower) versus log(mpg) scatterplots are much more linear. The scatterplot showing the relationship between cylinders and log(MPG) is interesting because cylinders is the only dicrete variable that we are working with. Most of the data falls into categories of 4, 6, or 8 cylinders and when looking at the mean of those 3 categories is appears that more cylinders leads to lower log(MPG). Therefore I think we can consider this relationship to be linear. Looking at the plot for acceleration versus log(mpg) we can see that as acceleration increases, the log(mpg) also tends to increase. The relationship appears to be somehwat linear although it definitely does not have the strongest correlation. 
+
+
+**Regression Analysis and Interpretation**
+
+The main question that we are looking to answer is, what is the best model we can use to most accurately predict the the MPG of a car. Basically, we want to figure out, what is the best combination of predictors that we should use to get the most accurate MPG estimate. The first thing that we want to do is run some tests to determine which of our variables have a significant impact on the response variable log(MPG). This will answer our first question of which factors have a significant impact on the mpg of a car. In order to do this we are going to create a model with all 6 of our predictors (cylinders,log(displacement),log(horsepower),log(weight),acceleration,year), and then use a anova table to check which of our predictors are believed to have a significant impact on the response.
+
+```{r}
+MPGmodel<-lm(log(MPGdata$mpg)~factor(MPGdata$cylinders)+log(MPGdata$displacement)+log(MPGdata$horsepower)+log(MPGdata$weight)+MPGdata$acceleration+MPGdata$year)
+anova(MPGmodel)
+```
+
+The primary factors that we are looking at in this anova table are the F values and the P-values. Since each variable has its own P-value and F value we will conduct 6 separate hypothesis tests. The null hypothesis is $\beta_i=0$ (i=1,2,3,4,5,6) where $\beta_i$ is the coefficient to the $i^{th}$ predictor in our model. The alternate hypothesis is that $\beta_i$ does not equal zero. In other words, if $\beta_i=0$ then the variable*$\beta_i$ will equal zero and thus it is not significant and should not be included in the model. If $\beta_i$ does not equal zero then the predictor has some type of significance in predicting the response. The decision rule is that if the P-value is less than $\alpha=0.05$, then we reject the null hypothesis. When looking at the anova table, if there is one or more stars next to the P-value then that means we can reject the null hypothesis with 95% confidence. In this specific case, every one of our factors has a P-value less than 0.05 so we can reject the null hypothesis in the case of all of our predictor variables. This means that all 6 of our predictors are a significant source of variation in terms of influencing the response variable. 
+
+So now that we have determined that all of our predictors probably have some significant amount of influence on the response, we want to see if we can improve our model to make the predictions more accurate. One method that we can use is forward and backward elimination algorithms. Akaike's Information Criterion (AIC) is a value that is used to judge the quality of a model. The formula is $n*log(SSE/n)+2*(p+1)$ where n is the number of observations, p is the number of predictors, and SSE is the sum of squared error. The better the model, the lower the AIC will be. The way the forward method works is we start with a reduced model that includes no predictors except for the Y-intercept. Then we add predictors one at a time based on which predictor will lower the AIC the most. If the AIC cannot be lowered anymore by adding a predictor then the selection process stops and that is the final model. The backward elimination process works in the same way except in reverse. We start with the full model including all 6 predictors and we remove one at a time based on which one will lower the AIC the most. If the AIC can no longer we lowered then the process is stopped and that is the final model. We can use the step function in R to simulate these processes. 
+
+```{r}
+MPGmodel0<-lm(log(MPGdata$mpg)~1)
+forwardselect<-step(MPGmodel0,scope=list(lower=MPGmodel0,upper=MPGmodel),direction="forward")
+backwardelim<-step(MPGmodel,scope=list(lower=MPGmodel0,upper=MPGmodel),direction="backward")
+```
+
+Looking at the forward selection model, we can see that the algorithm ended up adding all 6 of our predictors to the model. The first variable added was log(weight) followed by: year, cylinders, log(horsepower), acceleration, and log(displacement) in that order. This tells us that log(weight) is probably one of the more important variables. On the other hand, log(displacement) only lowered the AIC by a very small amount comparatively. When looking at the backward elimination method we can see that we ended with the same resulting model. The algoritm ended up removing none of our predictors from the starting model which obviously leavs us with a 6 predictor model. Based on these two selection algorithm, it appears as though it may be smart to use all 6 of our predictors in the final model. 
+
+Based on the forward and backward selection algorithm it seems like the best model is most likely the model that uses all six of our predictor variables, but to gain even more incite there are a few more tests that we can do. We can use the $R^2$ value which will tell us how close our model is to the actual responses. We can also use another measure known as Mallow's Cp statistic, which can also give us insight on which model is the best. Lastly we can also use a statistic similar to AIC which is instead known as BIC. The formula for BIC is $n*log(SSE/n)+log(n)*(p+1)$.  Using the regsubsets() function in R we can easily compute all of these values and see which predictors should give us the best results for all of these different methods. 
+
+```{r}
+library(leaps)
+MPGpredictors<-c(factor(MPGdata$cylinders),log(MPGdata$displacement),log(MPGdata$horsepower),log(MPGdata$weight),MPGdata$acceleration,MPGdata$year)
+MPGbest<-regsubsets(cbind(factor(MPGdata$cylinders),log(MPGdata$displacement),log(MPGdata$horsepower),log(MPGdata$weight),MPGdata$acceleration,MPGdata$year),y=log(MPGdata$mpg),data=MPGdata)
+summary(MPGbest)$which
+summary(MPGbest)$adjr2
+summary(MPGbest)$rsq
+summary(MPGbest)$cp
+summary(MPGbest)$bic
+```
+
+Looking at the $R^2$ values we can see that the highest $R^2$ value, 0.888, comes from the model that includes all six predictors. Although it should be noted that the $R^2$ value for the six predictor model is only marginally higher than the $R^2$ value for the 2 predictor model, 0.880. Moving on to the Cp statistic we actually see that the lowest Cp statistic comes from the model with 5 predictors instead of six. Then, looking at the Summary(MPGbest) table output we can see that when we are only using 5 predictors, it is best to leave out log(displacement). Next we look at the BIC values. Again we see that the lowest BIC value comes from the 5 predictor model where log(displacement) is excluded. Lastly, we look at the adjusted $R^2$ values and again we see that the highest value comes from the 5 predictor model. Based on these tests it seems like the 5 predictor model migh actually be better than the 6 predictor model that we had originally thought would be the best best on the forward and backward elimination algorithms. 
+
+Based on these results, I think that the best model for predicting a car's MPG is the 5 predictor model which excludes the log(displacement). Now, let's define a new model which only includes cylinders, log(horsepower), log(weight), acceleration, and year as the predictors with log(mpg) as the response variable.
+
+```{r}
+MPGmodelnew<-lm(log(MPGdata$mpg)~factor(MPGdata$cylinders)+log(MPGdata$horsepower)+log(MPGdata$weight)+MPGdata$acceleration+MPGdata$year)
+anova(MPGmodelnew)
+```
+
+With this model we can compute a summary table which will be able to estimate the coeffeicients in our linear model. 
+
+```{r}
+summary(MPGmodelnew)
+anova(MPGmodelnew,MPGmodel)
+```
+
+Based on the summary table we can see that the Y-intercept is 6.6998 while the coefficient for log(horsepower) is -0.239447, -0.6012 for log(weight), -0.0089 for acceleration, 0.0293 for year, and then the coefficients for the individual cylinder values are 0.238 for 4, 0.314 for 5, 0.152 for 6, and 0.148 for 8. We can also see that the residual standard error is 0.1105 for our model. 
+
+Based on these coefficients, we can see that log(weight) and log(horsepower) both have relatively large coeffecients in terms of absolut value which means they are probably most important in affecting log(MPG). acceleration and year seem to be less important factors. 
+
+In order for the model to work we need to check the assumptions of multiple linear regression and make sure that our model follows the assumptions. The first assumption is that the dependent variable and the independent variables share a linear relationship. This is important for the model to accurately predict results. We can check if this is true by making a fitted values versus residuals plot. The points should be scattered about the line Y=0 with no clear pattern. The points should appear to be randomly scattered. If the points form a clear pattern then the assumption is not met. 
+
+```{r}
+plot(MPGmodelnew$fitted.values,MPGmodelnew$residuals)
+```
+
+In the residulas versus fitted values plot above we can see that the points show no clear pattern which shows that we meet the first assumption. 
+
+The next assumption that we need to check is that the residuals are independent. Again we can check this by looking at the fitted values versus residuals plot. If the residuals were not independent then we would see some type of pattern in the plot implying that one residual might have an effect on another residual. However, we can clearly see that the plot has no pattern and the points are randomly scattered. 
+
+The next thing that we need to check is that the residuals are normally distributed. We can check this assumption with a Q-Q plot. If the points on the plot follow a generally straight line then we know that the assumption of normality is met. 
+
+```{r}
+plot(MPGmodelnew,2)
+```
+
+Looking at the plot above we can see that the points follow a generally straight line which means that the assumption of normality is met. 
+
+The last assumption that we need to check for is constant variance. The residuals should have a constant unchanging variance which we can check with the fitted values versus residuals plot. If the plot bunches up in one area or spreads out in another area then we know that the variance of the residuals is nnot constant. The points should be equally spread out if there is constant variance. Looking at the same fitted values versus residual plot above we can see that the residuals maintain the same spread throughout. Therefore, we know that the assumption of constant variance is met.  
+
+**Conclusion**
+
+Lastly, we need to summarize what we learned and draw some final conclusions. The first question we wanted to answer was which factors have a significant impact on a car's MPG. Based on the pairs scatterplots and the the anova/summary tables we can conclude that all 6 of our factors (cylinders,log(displacement),log(horsepower),log(weight),acceleration, and year) had some effect and some correlation with MPG. The most important factors appeard to be weight and horsepower based on the forward and backward slection algorithms we used, and based on the coefficients in the final model. The other question that we wanted to answer is what is the best model for accurately predicting a car's MPG. We used several methods and statistics to come to a conclusion on this. The forward and backward selection algoriths that we used both said that we should use the full model with all 6 predictors. However, the Cp, BIC, and adjusted $R^2$ values that we calculated all agreed that the best model was a five predictor model that used all of our predictors except for log(displacement). Since the forward and backward selection models only slightly favored the 6 predictor model over the 5 predictor model, it made the most sense to conclude that the five predictor model with cylinders, log(horsepower), log(weight), acceleration, and year as the predictors and log(MPG) as the response was the best model. The log transformations also allowed us to meet all of the assumptions of linear regression, so this is my clonclusion for the best model to predict a car's miles per gallon. 
+
+
+
